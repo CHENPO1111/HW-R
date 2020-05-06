@@ -1,0 +1,184 @@
+---
+title: "HW R"
+author: "廖振博"
+date: "2020/5/1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### R homework
+#### This is my homework to summary the R language that I have learned.
+
+
+## **判斷變數所屬類別**
+#### 在分析資料前必須知道變數是屬於numeric還是logical，因此使用class來判斷變數所屬類別。
+#### 例如:
+
+```{r}
+class(c(TRUE,FALSE))
+class(3.14)
+```
+## **變數轉型**
+#### 我們已經知道變數的類別後，當有些統計方法需要變數是類別或是數值時，需要將變數轉型成我們需要的變數型態
+```{r}
+x<-3.14
+as.numeric(x)
+y<-c(11,22,33,44)
+as.data.frame(y)
+```
+## **檢視變數基本統計量**
+#### summary這個函數可以幫助我們了解資料的分布狀況，甚至是統計模型配適的狀況與檢驗
+```{r}
+summary(attitude)
+fit1 <- lm(rating ~ ., data = attitude)
+summary(fit1)
+```
+#### str這個函數也能用來檢視變數資料結構，還能顯示變數類型以及開頭的幾個值
+```{r}
+str(attitude)
+```
+
+## **找遺失值**
+```{r}
+z<-c(1:3,NA)
+z
+is.na(z)
+```
+## **建立矩陣**
+```{r}
+```
+
+
+```{r}
+matrix(1:6,nrow = 2,ncol = 3)
+```
+#### dimnames 可指定參數名稱
+```{r}
+matrix(1:6,nrow = 2,ncol = 3,dimnames = list(c('r1','r2'),c('c1','c2','c3')))
+```
+
+## **合併矩陣**
+#### 假設有兩個矩陣
+```{r}
+x<-matrix(1:6, nrow = 3, ncol = 2)
+y<-matrix(11:16, nrow = 3, ncol = 2)
+x
+y
+```
+#### 使用C函數合併兩矩陣，會將資料轉為一維矩陣
+```{r}
+c(x,y)
+```
+
+#### cbind與rbind會保持資料結構合併
+```{r}
+cbind(x,y)
+rbind(x,y)
+```
+
+## **建立data frame**
+#### data frame與矩陣類似，不過他每一行間的資料類型是可以不同的
+```{r}
+k<- data.frame(x = letters[1:6],y = rnorm(6),z = runif(6) > 0.5)
+k
+```
+#### row.names 可指定data frame的列名稱
+```{r}
+data.frame(x = letters[1:6],y = rnorm(6),z = runif(6) > 0.5,row.names = c("A", "B", "C", "D", "E","F"))
+```
+
+## **Linear Model**
+#### 接下來想簡單整理一些迴歸分析的codes，先以R的內建資料集attitude作範例
+#### 先以散布圖觀察各變數間的關係，以及summary觀察資料結構
+```{r}
+pairs(attitude,main="attitude data")
+summary(attitude)
+```
+#### 以lm函數配適迴歸模型，函數中要陳述資料集與想加入模型的變數
+#### 以下~.表將資料集中所有變數都加入模型中
+```{r}
+fit1 <- lm(rating ~ ., data = attitude)
+summary(fit1)
+```
+#### 由summary這個函數的結果告訴我們只有complaints的效應是顯著的
+#### 因此在更進一步的模型變數選擇中，就會比較重視complaints這個變數
+#### 而模型配適中還有一個重要的一點，就是model checking，如constant variance、normality等等
+```{r}
+opar <- par(mfrow = c(2, 2))
+plot(fit1)
+```
+
+#### 另外還可以使用統計方法幫我們選擇重要的變數，例如Stepwise regression
+#### pent所代表的是將變數選進模型的p-value標準，而prem則是淘汰變數的p-value標準
+```{r,include = FALSE}
+library(olsrr)
+```
+```{r}
+fit1 <- lm(rating ~ ., data = attitude)
+# Forward
+stepwise.for <- ols_step_forward_p(fit1, pent = 0.15)
+summary(stepwise.for$model)
+# Backward
+stepwise.back <- ols_step_backward_p(fit1, prem = 0.15)
+summary(stepwise.back$model)
+# Both
+stepwise.both <- ols_step_both_p(fit1, pent = 0.15, prem = 0.15)
+summary(stepwise.both$model)
+```
+## **CRD實驗**
+```{r}
+CRD.data <- matrix(rep(NA, 20*2), 20, 2)
+CRD.data <- data.frame(CRD.data)
+colnames(CRD.data) <- c("treatments", "response")
+CRD.data$response <- c(575, 542, 530, 539, 570,
+                       565, 593, 590, 579, 610,
+                       600, 651, 610, 637, 629,
+                       725, 700, 715, 685, 710)
+levels <- as.factor(c(rep(160, 5), rep(180, 5), rep(200, 5), rep(220, 5)))
+CRD.data$treatments <- levels
+CRD.fit1 <- lm(response ~ treatments, data = CRD.data)
+summary(CRD.fit1)
+```
+#### Model checking by graph
+```{r}
+par(mfrow = c(1, 3))
+plot(CRD.fit1$fitted.values, CRD.fit1$residuals, pch = 19,xlab = "fitted", ylab = "res")
+lines(c(0, 1000), c(0, 0), col = 2, lwd = 1.5)
+title("check constant variance")
+qqnorm(CRD.fit1$residuals)
+qqline(CRD.fit1$residuals)
+plot(CRD.fit1$residuals, pch = 19, xlab = "run order", ylab = "res")
+lines(c(0, 1000), c(0, 0), col = 2, lwd = 1.5)
+title("check independence")
+```
+
+```{r,include = FALSE}
+library("FrF2")
+```
+## **2^(4-1)design**
+```{r}
+design1 <- FrF2(8, generators = "ABC", randomize=FALSE)
+y <- c(45, 100, 45, 65, 75, 60, 80, 96)
+design1 <- add.response(design1, y)
+design1$A <- (as.numeric(design1$A)-(1.5))/(0.5)
+design1$B <- (as.numeric(design1$B)-(1.5))/(0.5)
+design1$C <- (as.numeric(design1$C)-(1.5))/(0.5)
+design1$D <- (as.numeric(design1$D)-(1.5))/(0.5)
+fit1 <- lm(y ~ A+B+C+D+A*B+A*C+A*D, data = design1)
+summary(fit1)
+```
+#### LenthPlot可以幫助我們了解那些effects比較顯著
+```{r}
+BsMD::LenthPlot(fit1)
+```
+
+
+
+
+
+
+
+
